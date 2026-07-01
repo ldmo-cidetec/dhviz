@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<!--
+    index.html
+    DHViz: A Denavit-Hartenberg Visualizer
+    Main HTML shell. Loads all CDN dependencies and defines the page layout.
+    JavaScript logic lives in js/Main.js and the MVC modules under js/.
+-->
+<html lang="es" style="overflow:hidden">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>DHViz</title>
+    <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="./img/favicon.ico">
+
+    <!-- Tailwind CSS (utility classes) -->
+    <link href="libs/css/tailwind.min.css" rel="stylesheet">
+
+    <!-- KaTeX (math rendering for DH parameters and matrices) -->
+    <link rel="stylesheet" href="libs/css/katex.min.css">
+    <style>
+        /* Scale KaTeX to match surrounding text size */
+        .katex { font-size: 1em !important; }
+        /* Slide-in animation for the help panel */
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to   { transform: translateX(0); }
+        }
+    </style>
+    <!-- KaTeX is deferred; HelpPanel.js renders math when the panel opens -->
+    <script defer src="libs/js/katex.min.js"></script>
+
+    <!-- Algebrite (symbolic algebra for transformation matrices) -->
+    <script src="libs/js/algebrite.bundle-for-browser.min.js"></script>
+
+    <!-- highlight.js (syntax highlighting in the Export and URDF tabs) -->
+    <link rel="stylesheet" href="libs/css/github.min.css">
+    <script src="libs/js/highlight.min.js"></script>
+    <script src="libs/js/python.min.js"></script>
+    <script src="libs/js/matlab.min.js"></script>
+    <script src="libs/js/xml.min.js"></script>
+
+    <!-- Three.js import map (3D scene renderer) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "./libs/js/three/build/three.module.min.js",
+                "three/addons/": "./libs/js/three/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-white overflow-hidden flex flex-col" style="height:100dvh">
+
+    <!-- Navigation bar -->
+    <nav class="bg-black shadow-lg p-4 flex justify-between items-center flex-shrink-0">
+        <div class="flex items-center gap-3">
+            <img src="./img/logo.png" alt="DHViz logo" style="height:36px; width:36px; border-radius:8px; background:white; padding:3px; object-fit:contain">
+            <h1 class="text-xl text-white">DHViz: A Denavit-Hartenberg Visualizer</h1>
+        </div>
+        <!-- Help button - opens the help panel -->
+        <button id="help-open-button" class="text-gray-400 hover:text-white focus:outline-none" aria-label="Help">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+    </nav>
+
+    <!-- DESKTOP layout (>= md breakpoint): side-by-side panels -->
+    <div id="layout-md" class="hidden md:flex flex-grow overflow-hidden">
+
+        <!-- Left panel: tabs + config/matrices/jacobian/export/urdf panels -->
+        <div id="left-panel"
+             class="flex flex-col border-r border-gray-200 overflow-hidden flex-shrink-0"
+             style="width:50%; min-width:200px;">
+
+            <!-- Tab bar -->
+            <div class="flex border-b border-gray-200 bg-gray-50 flex-shrink-0 overflow-x-auto">
+
+                <!-- DH tab -->
+                <button id="tab-config-md"
+                    class="flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 border-black text-black focus:outline-none whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <line x1="4" y1="6" x2="20" y2="6"/>
+                        <line x1="4" y1="12" x2="20" y2="12"/>
+                        <line x1="4" y1="18" x2="20" y2="18"/>
+                        <circle cx="8"  cy="6"  r="2" fill="currentColor" stroke="none"/>
+                        <circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/>
+                        <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
+                    </svg>
+                    DH
+                </button>
+
+                <!-- Matrices tab -->
+                <button id="tab-matrices-md"
+                    class="flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-600 focus:outline-none whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 3H3a1 1 0 00-1 1v16a1 1 0 001 1h2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 3h2a1 1 0 011 1v16a1 1 0 01-1 1h-2"/>
+                        <line x1="10" y1="8"  x2="14" y2="8"/>
+                        <line x1="10" y1="12" x2="14" y2="12"/>
+                        <line x1="10" y1="16" x2="14" y2="16"/>
+                    </svg>
+                    Matrices
+                </button>
+
+                <!-- Jacobian tab -->
+                <button id="tab-jacobian-md"
+                    class="flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-600 focus:outline-none whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 3H3a1 1 0 00-1 1v16a1 1 0 001 1h2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 3h2a1 1 0 011 1v16a1 1 0 01-1 1h-2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 8l3 8 3-8"/>
+                        <line x1="10.5" y1="13" x2="13.5" y2="13"/>
+                    </svg>
+                    Jacobian
+                </button>
+
+                <!-- Export tab -->
+                <button id="tab-export-md"
+                    class="flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-600 focus:outline-none whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+                    </svg>
+                    Export
+                </button>
+
+                <!-- URDF tab -->
+                <button id="tab-urdf-md"
+                    class="flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-600 focus:outline-none whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2 17l10 5 10-5"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2 12l10 5 10-5"/>
+                    </svg>
+                    URDF
+                </button>
+
+            </div>
+
+            <!-- Tab content panels (only one visible at a time) -->
+            <div id="panel-config-md"   class="flex-grow overflow-y-auto overflow-x-hidden p-4"></div>
+            <div id="panel-matrices-md" class="flex-grow overflow-y-auto overflow-x-hidden p-4 hidden" style="display:none"></div>
+            <div id="panel-jacobian-md" class="flex-grow overflow-y-auto overflow-x-hidden p-4 hidden" style="display:none"></div>
+            <div id="panel-export-md"   class="flex-grow overflow-y-auto overflow-x-hidden p-4 hidden" style="display:none"></div>
+            <div id="panel-urdf-md"     class="flex-grow overflow-y-auto overflow-x-hidden p-4 hidden" style="display:none"></div>
+
+        </div>
+
+        <!-- Vertical resize handle (drag to adjust left/right split) -->
+        <div id="resize-v"
+             class="w-1 bg-gray-200 hover:bg-black cursor-col-resize flex-shrink-0 transition-colors duration-150">
+        </div>
+
+        <!-- 3D viewport -->
+        <div class="flex-grow flex flex-col overflow-hidden relative">
+            <div id="scene-container" class="flex-grow"></div>
+            <!-- View presets panel (top-left) -->
+            <div id="view-panel-md"
+                class="absolute top-4 left-4 bg-white bg-opacity-90 border border-gray-200
+                       rounded-lg shadow p-2 z-10">
+            </div>
+            <!-- Scale controls overlay (links, joints, axes, text) -->
+            <div id="scale-panel-md"
+                class="absolute bottom-4 right-4 bg-white bg-opacity-90 border border-gray-200
+                       rounded-lg shadow p-3 z-10 overflow-hidden"
+                style="width:180px;">
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MOBILE layout (< md breakpoint): stacked panels -->
+    <div id="layout-sm" class="flex md:hidden flex-col flex-grow" style="overflow:hidden; max-width:100vw; position:relative">
+
+        <!-- 3D viewport -->
+        <div id="scene-sm"
+             class="flex-shrink-0 overflow-hidden relative"
+             style="height:45%; min-height:120px;">
+            <!-- View presets panel -->
+            <div id="view-panel-sm"
+                class="absolute top-2 left-2 bg-white bg-opacity-90 border border-gray-200
+                       rounded-lg shadow p-1.5 z-10 overflow-hidden">
+            </div>
+            <!-- Scale controls overlay -->
+            <div id="scale-panel-sm"
+                class="absolute bottom-2 right-2 bg-white bg-opacity-90 border border-gray-200
+                       rounded-lg shadow p-3 z-10 overflow-hidden"
+                style="width:160px;">
+            </div>
+        </div>
+
+        <!-- Horizontal resize handle (drag to adjust top/bottom split) -->
+        <div id="resize-h"
+             class="h-1 bg-gray-200 cursor-row-resize flex-shrink-0 transition-colors duration-150">
+        </div>
+
+        <!-- Config panel -->
+        <div class="flex flex-col flex-grow overflow-hidden">
+
+            <!-- Tab bar (scrollable horizontally so all tabs are reachable on small screens) -->
+            <div class="flex border-b border-gray-200 bg-gray-50 flex-shrink-0 overflow-x-auto"
+                 style="-webkit-overflow-scrolling:touch; scrollbar-width:none"
+                 onscroll="this.style.overflowX='auto'">
+
+                <button id="tab-config-sm"
+                    class="flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 border-black text-black focus:outline-none whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <line x1="4" y1="6" x2="20" y2="6"/>
+                        <line x1="4" y1="12" x2="20" y2="12"/>
+                        <line x1="4" y1="18" x2="20" y2="18"/>
+                        <circle cx="8"  cy="6"  r="2" fill="currentColor" stroke="none"/>
+                        <circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/>
+                        <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
+                    </svg>
+                    DH
+                </button>
+
+                <button id="tab-matrices-sm"
+                    class="flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-600 focus:outline-none whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 3H3a1 1 0 00-1 1v16a1 1 0 001 1h2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 3h2a1 1 0 011 1v16a1 1 0 01-1 1h-2"/>
+                        <line x1="10" y1="8"  x2="14" y2="8"/>
+                        <line x1="10" y1="12" x2="14" y2="12"/>
+                        <line x1="10" y1="16" x2="14" y2="16"/>
+                    </svg>
+                    Matrices
+                </button>
+
+                <button id="tab-jacobian-sm"
+                    class="flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-600 focus:outline-none whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 3H3a1 1 0 00-1 1v16a1 1 0 001 1h2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 3h2a1 1 0 011 1v16a1 1 0 01-1 1h-2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 8l3 8 3-8"/>
+                        <line x1="10.5" y1="13" x2="13.5" y2="13"/>
+                    </svg>
+                    Jacobian
+                </button>
+
+                <button id="tab-export-sm"
+                    class="flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-600 focus:outline-none whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+                    </svg>
+                    Export
+                </button>
+
+                <button id="tab-urdf-sm"
+                    class="flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-600 focus:outline-none whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2 17l10 5 10-5"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2 12l10 5 10-5"/>
+                    </svg>
+                    URDF
+                </button>
+
+            </div>
+
+            <!-- Tab content panels (padding-bottom clears Android/iOS navigation bar) -->
+            <div id="panel-config-sm"   class="flex-grow overflow-y-auto overflow-x-hidden p-4" style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 80px))"></div>
+            <div id="panel-matrices-sm" class="flex-grow overflow-y-auto overflow-x-hidden p-4 hidden" style="display:none; padding-bottom: max(1rem, env(safe-area-inset-bottom, 80px))"></div>
+            <div id="panel-jacobian-sm" class="flex-grow overflow-y-auto overflow-x-hidden p-4 hidden" style="display:none; padding-bottom: max(1rem, env(safe-area-inset-bottom, 80px))"></div>
+            <div id="panel-export-sm"   class="flex-grow overflow-y-auto overflow-x-hidden p-4 hidden" style="display:none; padding-bottom: max(1rem, env(safe-area-inset-bottom, 80px))"></div>
+            <div id="panel-urdf-sm"     class="flex-grow overflow-y-auto overflow-x-hidden p-4 hidden" style="display:none; padding-bottom: max(1rem, env(safe-area-inset-bottom, 80px))"></div>
+
+        </div>
+
+    </div>
+
+    <!-- Help panel (slides in from the right, shown/hidden by HelpPanel.js) -->
+    <div id="help-panel"
+        class="fixed top-0 right-0 w-full sm:w-2/3 md:w-1/2 lg:w-1/3 xl:w-1/4
+               bg-white shadow-xl overflow-y-auto"
+        style="box-sizing:border-box; max-width:100vw; display:none; z-index:9999; height:100dvh">
+
+        <button id="help-close-button"
+            class="text-3xl absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+            &times;
+        </button>
+
+        <div class="p-6" style="box-sizing:border-box; width:100%; max-width:100%">
+            <h2 class="text-gray-800 font-semibold text-2xl mb-4">Help</h2>
+
+            <!-- Help topics (each expands on click, HelpPanel.js handles toggle logic) -->
+            <div id="help-topics" class="space-y-4">
+
+                <div class="help-topic border border-gray-200 rounded-lg">
+                    <button class="help-topic-header w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-left text-gray-800 font-semibold rounded-lg">
+                        What is DHViz?
+                    </button>
+                    <div class="help-topic-content hidden px-4 py-3 text-gray-700 text-sm leading-relaxed">
+                        DHViz is an interactive web-based tool for configuring and visualizing the kinematics
+                        of open-chain robotic manipulators using the Denavit-Hartenberg convention (Craig formulation).
+                        It computes transformation matrices, the geometric Jacobian, and exports ready-to-use
+                        code in Python (NumPy/SymPy) and MATLAB.
+                    </div>
+                </div>
+
+                <div class="help-topic border border-gray-200 rounded-lg">
+                    <button class="help-topic-header w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-left text-gray-800 font-semibold rounded-lg">
+                        How to define a robot?
+                    </button>
+                    <div class="help-topic-content hidden px-4 py-3 text-gray-700 text-sm leading-relaxed">
+                        <ol class="list-decimal ml-5 space-y-1">
+                            <li>Open the <strong>DH</strong> tab.</li>
+                            <li>Press <strong>Add link</strong> for each link of your robot.</li>
+                            <li>Select the joint type: <strong>R</strong> (revolute), <strong>P</strong> (prismatic), or <strong>F</strong> (fixed).
+                                The last link is always fixed.</li>
+                            <li>Enter the four geometric parameters for each link:
+                                <span class="math-inline">\alpha_{i-1},\, a_{i-1},\, d_i,\, \theta_i</span>.</li>
+                            <li>The 3D visualization updates automatically.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="help-topic border border-gray-200 rounded-lg">
+                    <button class="help-topic-header w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-left text-gray-800 font-semibold rounded-lg">
+                        Craig (modified DH) convention
+                    </button>
+                    <div class="help-topic-content hidden px-4 py-3 text-gray-700 text-sm leading-relaxed">
+                        Each row <em>i</em> defines the transformation
+                        <span class="math-inline">{}^{i-1}T_i</span> with four parameters:<br><br>
+                        <ul class="list-disc ml-5 space-y-1">
+                            <li><span class="math-inline">\alpha_{i-1}</span> - angle from <span class="math-inline">Z_{i-1}</span> to <span class="math-inline">Z_i</span> about <span class="math-inline">X_{i-1}</span></li>
+                            <li><span class="math-inline">a_{i-1}</span> - distance from <span class="math-inline">Z_{i-1}</span> to <span class="math-inline">Z_i</span> along <span class="math-inline">X_{i-1}</span></li>
+                            <li><span class="math-inline">d_i</span> - distance from <span class="math-inline">X_{i-1}</span> to <span class="math-inline">X_i</span> along <span class="math-inline">Z_i</span></li>
+                            <li><span class="math-inline">\theta_i</span> - angle from <span class="math-inline">X_{i-1}</span> to <span class="math-inline">X_i</span> about <span class="math-inline">Z_i</span></li>
+                        </ul><br>
+                        The variable parameter is <span class="math-inline">\theta_i</span> for revolute joints
+                        and <span class="math-inline">d_i</span> for prismatic joints.
+                    </div>
+                </div>
+
+                <div class="help-topic border border-gray-200 rounded-lg">
+                    <button class="help-topic-header w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-left text-gray-800 font-semibold rounded-lg">
+                        How to move the joints?
+                    </button>
+                    <div class="help-topic-content hidden px-4 py-3 text-gray-700 text-sm leading-relaxed">
+                        Revolute (<strong>R</strong>) and prismatic (<strong>P</strong>) joints have a slider labeled
+                        <span class="math-inline">q_i</span> in the <strong>Joint variables</strong> section below the table.
+                        Drag it to move the joint and see the robot update in real time.<br><br>
+                        The min and max inputs at the ends of each slider let you set the joint limits.
+                        To set a precise value, type it directly in the input field on the right of the slider.
+                    </div>
+                </div>
+
+                <div class="help-topic border border-gray-200 rounded-lg">
+                    <button class="help-topic-header w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-left text-gray-800 font-semibold rounded-lg">
+                        Transformation matrices tab
+                    </button>
+                    <div class="help-topic-content hidden px-4 py-3 text-gray-700 text-sm leading-relaxed">
+                        The <strong>Matrices</strong> tab shows two columns side by side for each link:<br><br>
+                        <ul class="list-disc ml-5 space-y-1">
+                            <li><strong>Symbolic</strong> (blue) - the general form with <span class="math-inline">q_i</span> as symbols.</li>
+                            <li><strong>Numeric</strong> (gray) - evaluated with the current joint values.</li>
+                        </ul><br>
+                        At the bottom, the accumulated transformation
+                        <span class="math-inline">{}^0T_n = {}^0T_1 \cdot \ldots \cdot {}^{n-1}T_n</span>
+                        is shown numerically.
+                    </div>
+                </div>
+
+                <div class="help-topic border border-gray-200 rounded-lg">
+                    <button class="help-topic-header w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-left text-gray-800 font-semibold rounded-lg">
+                        Jacobian tab
+                    </button>
+                    <div class="help-topic-content hidden px-4 py-3 text-gray-700 text-sm leading-relaxed">
+                        The <strong>Jacobian</strong> tab shows the geometric Jacobian
+                        <span class="math-inline">J(q) \in \mathbb{R}^{6 \times n}</span>,
+                        which relates joint velocities to end-effector velocities:<br><br>
+                        <span class="math-block">\begin{bmatrix}v\\\omega\end{bmatrix} = J(q)\,\dot{q}</span><br>
+                        The manipulability measure
+                        <span class="math-inline">w = \sqrt{\det(J_v J_v^T)}</span>
+                        indicates how far the robot is from a singular configuration.
+                        A value near zero means the robot is close to losing a degree of freedom.
+                    </div>
+                </div>
+
+                <div class="help-topic border border-gray-200 rounded-lg">
+                    <button class="help-topic-header w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-left text-gray-800 font-semibold rounded-lg">
+                        Reference points
+                    </button>
+                    <div class="help-topic-content hidden px-4 py-3 text-gray-700 text-sm leading-relaxed">
+                        Reference points (e.g. center of mass positions) can be added in the
+                        <strong>DH</strong> tab under <em>Reference points</em>.<br><br>
+                        Each point has a label, a frame <span class="math-inline">\{i\}</span> it belongs to,
+                        and local coordinates <span class="math-inline">x, y, z</span>.
+                        It is displayed as a red sphere in the 3D viewer and its position in the base frame
+                        <span class="math-inline">\{0\}</span> is computed as
+                        <span class="math-inline">{}^0p = {}^0T_i \cdot {}^ip_{\text{local}}</span>
+                        in the <strong>Matrices</strong> tab.
+                    </div>
+                </div>
+
+                <div class="help-topic border border-gray-200 rounded-lg">
+                    <button class="help-topic-header w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-left text-gray-800 font-semibold rounded-lg">
+                        Export tab
+                    </button>
+                    <div class="help-topic-content hidden px-4 py-3 text-gray-700 text-sm leading-relaxed">
+                        The <strong>Export</strong> tab generates ready-to-run code for your robot.<br><br>
+                        Use the <strong>Numeric / Symbolic</strong> toggle per language:<br><br>
+                        <ul class="list-disc ml-5 space-y-1">
+                            <li><strong>Numeric</strong> - uses NumPy (Python) or native MATLAB arrays.</li>
+                            <li><strong>Symbolic</strong> - uses SymPy (Python) or the Symbolic Math Toolbox (MATLAB),
+                                with <span class="math-inline">q_i</span> as symbolic variables.</li>
+                        </ul><br>
+                        The generated code includes forward kinematics, frame transforms, the geometric Jacobian,
+                        and the positions of all reference points. Press <strong>Copy</strong> to copy to clipboard.
+                    </div>
+                </div>
+
+                <div class="help-topic border border-gray-200 rounded-lg">
+                    <button class="help-topic-header w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-left text-gray-800 font-semibold rounded-lg">
+                        URDF tab
+                    </button>
+                    <div class="help-topic-content hidden px-4 py-3 text-gray-700 text-sm leading-relaxed">
+                        The <strong>URDF</strong> tab generates a Unified Robot Description Format file
+                        for use in ROS, RViz, MoveIt, and other robotics frameworks.<br><br>
+                        The file includes:<br><br>
+                        <ul class="list-disc ml-5 space-y-1">
+                            <li>A <code>base_link</code> at the world origin <span class="math-inline">\{0\}</span>.</li>
+                            <li>One <code>&lt;joint&gt;</code> and <code>&lt;link&gt;</code> per row, with origin
+                                computed from <span class="math-inline">\alpha_{i-1}, a_{i-1}, d_i, \theta_i</span>.</li>
+                            <li>Type <code>revolute</code> or <code>prismatic</code> for actuated joints,
+                                <code>fixed</code> for passive.</li>
+                            <li>Joint limits from the slider min/max values.</li>
+                            <li>Cylinder visuals connecting consecutive frames with spheres at each joint origin.</li>
+                            <li>A red sphere at the end-effector.</li>
+                        </ul><br>
+                        Use <strong>Download .urdf</strong> to save, or <strong>Copy</strong> to copy to clipboard.
+                    </div>
+                </div>
+
+                <div class="help-topic border border-gray-200 rounded-lg">
+                    <button class="help-topic-header w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-left text-gray-800 font-semibold rounded-lg">
+                        How to navigate the 3D viewer?
+                    </button>
+                    <div class="help-topic-content hidden px-4 py-3 text-gray-700 text-sm leading-relaxed">
+                        The 3D viewer uses <strong>OrbitControls</strong>:<br><br>
+                        <ul class="list-disc ml-5 space-y-1">
+                            <li><strong>Rotate:</strong> left click and drag.</li>
+                            <li><strong>Zoom:</strong> scroll wheel or pinch on touch.</li>
+                            <li><strong>Pan:</strong> right click and drag.</li>
+                        </ul><br>
+                        Use the <strong>View</strong> panel (top-left of the viewer) to switch to preset
+                        orientations: <strong>ISO</strong> (isometric), <strong>TOP</strong> (from +Z),
+                        <strong>FRONT</strong> (from +Y), and <strong>RIGHT</strong> (from +X).<br><br>
+                        Use the <strong>Scale</strong> panel (bottom-right of the viewer) to adjust the
+                        size of links, joints, axes, and labels independently.
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Back button: returns to the full topic list from an expanded topic -->
+            <div class="w-full flex justify-end mt-4">
+                <button id="help-back-button"
+                    class="hidden px-4 py-2 bg-black text-white rounded-md shadow hover:bg-gray-800 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6l-6 6m0 0l6 6m-6-6h15"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application entry point (ES module) -->
+    <script type="module" src="./js/Main.js"></script>
+
+</body>
+</html>

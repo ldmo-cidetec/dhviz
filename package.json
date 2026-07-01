@@ -1,0 +1,49 @@
+{
+  "name": "dhviz",
+  "version": "1.0.0",
+  "description": "Denavit-Hartenberg Robot Visualizer",
+  "author": "Alejandro Rodriguez-Molina",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "electron": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.dhviz.app",
+    "productName": "DHViz",
+    "asar": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "index.html",
+      "js/**/*",
+      "libs/**/*",
+      "img/**/*",
+      "favicon.svg",
+      "favicon.ico",
+      "icon.ico",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "./img/logo.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "./img/logo.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "./img/logo.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "shortcutName": "DHViz"
+    }
+  }
+}
