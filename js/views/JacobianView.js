@@ -108,7 +108,11 @@ class JacobianView {
 
             const wLabel = document.createElement('span');
             wLabel.className = 'text-xs text-gray-600';
-            wLabel.innerHTML = tex(`w = \\sqrt{\\det(J_v J_v^T)} = ${parseFloat(manipulability.toFixed(6))}`);
+
+            const formula = n < 6
+                ? `w = \\sqrt{\\det(J^T J)} = ${parseFloat(manipulability.toFixed(6))}`
+                : `w = \\sqrt{\\det(J J^T)} = ${parseFloat(manipulability.toFixed(6))}`;
+            wLabel.innerHTML = tex(formula);
             singDiv.appendChild(wLabel);
 
             const status = document.createElement('span');
