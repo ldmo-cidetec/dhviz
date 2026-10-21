@@ -111,6 +111,30 @@ class DHView {
         `;
         wrap.appendChild(guide);
 
+        // Preset robots header
+        const presetHeader = document.createElement('p');
+        presetHeader.className = 'text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2';
+        presetHeader.textContent = 'Preset Robots';
+        wrap.appendChild(presetHeader);
+
+        // Preset robot buttons
+        const presetWrap = document.createElement('div');
+        presetWrap.className = 'flex gap-2 mb-3';
+
+        const btnPUMA = document.createElement('button');
+        btnPUMA.dataset.loadPreset = 'puma560';
+        btnPUMA.className = 'px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-lg text-gray-600 hover:border-black hover:text-black transition';
+        btnPUMA.textContent = 'PUMA 560';
+
+        const btn5DOF = document.createElement('button');
+        btn5DOF.dataset.loadPreset = 'robot5dof';
+        btn5DOF.className = 'px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-lg text-gray-600 hover:border-black hover:text-black transition';
+        btn5DOF.textContent = '5-DOF Spatial';
+
+        presetWrap.appendChild(btnPUMA);
+        presetWrap.appendChild(btn5DOF);
+        wrap.appendChild(presetWrap);
+
         // Table header label
         const tableHeader = document.createElement('p');
         tableHeader.className = 'text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2';
