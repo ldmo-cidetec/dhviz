@@ -10,10 +10,10 @@
 class DHModel {
 
     constructor() {
-        this._rows          = [];
-        this._listeners     = [];
+        this._rows = [];
+        this._listeners = [];
         this._sceneListeners = [];
-        this._nextId        = 1;
+        this._nextId = 1;
     }
 
     // Each row represents one link transformation: ^{i-1}T_i
@@ -25,15 +25,68 @@ class DHModel {
     // variable  : theta_i if R, d_i if P - controlled by slider
     _makeRow() {
         return {
-            id:        this._nextId++,
+            id: this._nextId++,
             jointType: 'R',
-            actuated:  true,
-            alpha:     0,   // alpha_{i-1}  [rad]
-            a:         0,   // a_{i-1}      [m]
-            d:         0,   // d_i          [m]
-            theta:     0,   // theta_i      [rad]
-            q:         0,   // joint variable (set by slider, does not affect table offset)
+            actuated: true,
+            alpha: 0,   // alpha_{i-1}  [rad]
+            a: 0,   // a_{i-1}      [m]
+            d: 0,   // d_i          [m]
+            theta: 0,   // theta_i      [rad]
+            q: 0,   // joint variable (set by slider, does not affect table offset)
         };
+    }
+
+    // Load PUMA 560 (Regular Config)
+    loadPUMA560() {
+        this._rows = [];
+        this._nextId = 1;
+        const params = [
+            { alpha: 0,          a: 0,       d: 0,       theta: 0, jointType: 'R', q: 0        },
+            { alpha: -Math.PI/2, a: 0,       d: 0.2435,       theta: 0, jointType: 'R', q: Math.PI/4 },
+            { alpha: 0,          a: 0.4318,  d: -0.0934, theta: 0, jointType: 'R', q: Math.PI/4 },
+            { alpha: Math.PI/2, a: -0.0203, d: 0.4331,  theta: 0, jointType: 'R', q: 0        },
+            { alpha: -Math.PI/2,  a: 0,       d: 0,       theta: 0, jointType: 'R', q: Math.PI/4 },
+            { alpha: Math.PI/2, a: 0,       d: 0,       theta: 0, jointType: 'R', q: 0        },
+            { alpha: 0,          a: 0,       d: 0,       theta: 0, jointType: 'F', q: 0        },
+        ];
+        params.forEach(p => {
+            const row = this._makeRow();
+            row.alpha     = p.alpha;
+            row.a         = p.a;
+            row.d         = p.d;
+            row.theta     = p.theta;
+            row.jointType = p.jointType;
+            row.actuated  = p.jointType !== 'F';
+            row.q         = p.q;
+            this._rows.push(row);
+        });
+        this._notify();
+    }
+
+    // Load Robot Spatial 5-DOF (Regular Config)
+    loadRobot5DOF() {
+        this._rows = [];
+        this._nextId = 1;
+        const params = [
+            { alpha: 0,           a: 0,   d: 0.3, theta: 0,         jointType: 'R', q: 0         },
+            { alpha: Math.PI/2,   a: 0,   d: 0,   theta: 0,         jointType: 'R', q: Math.PI/4 },
+            { alpha: 0,           a: 0.3, d: 0,   theta: 0,         jointType: 'R', q: Math.PI/4 },
+            { alpha: 0,           a: 0.2, d: 0,   theta: Math.PI/2, jointType: 'R', q: 0         },
+            { alpha: Math.PI/2,   a: 0,   d: 0,   theta: 0,         jointType: 'R', q: Math.PI/4 },
+            { alpha: 0,           a: 0,   d: 0.1,   theta: 0,         jointType: 'F', q: 0         },
+        ];
+        params.forEach(p => {
+            const row = this._makeRow();
+            row.alpha     = p.alpha;
+            row.a         = p.a;
+            row.d         = p.d;
+            row.theta     = p.theta;
+            row.jointType = p.jointType;
+            row.actuated  = p.jointType !== 'F';
+            row.q         = p.q;
+            this._rows.push(row);
+        });
+        this._notify();
     }
 
     // Add a new link to the end of the table.
@@ -59,7 +112,7 @@ class DHModel {
         if (this._rows.length === 0) return;
         const last = this._rows[this._rows.length - 1];
         last.jointType = 'F';
-        last.actuated  = false;
+        last.actuated = false;
     }
 
     // Update a structural field (jointType) - triggers full table re-render.
@@ -91,19 +144,19 @@ class DHModel {
         this._notifyScene();
     }
 
-    get rows()     { return this._rows; }
+    get rows() { return this._rows; }
     get rowCount() { return this._rows.length; }
 
     // subscribe: structural change listeners (full re-render)
     // subscribeScene: pose-only change listeners (scene update only)
     // onStructureChange / onPoseChange are named aliases for clarity
     onStructureChange(fn) { this._listeners.push(fn); }
-    onPoseChange(fn)      { this._sceneListeners.push(fn); }
+    onPoseChange(fn) { this._sceneListeners.push(fn); }
 
-    subscribe(fn)      { this.onStructureChange(fn); }
+    subscribe(fn) { this.onStructureChange(fn); }
     subscribeScene(fn) { this.onPoseChange(fn); }
 
-    _notify()      { this._listeners.forEach(fn => fn()); }
+    _notify() { this._listeners.forEach(fn => fn()); }
     _notifyScene() { this._sceneListeners.forEach(fn => fn()); }
 }
 
