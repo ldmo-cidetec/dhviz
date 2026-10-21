@@ -19,7 +19,7 @@ class DHController {
 
     constructor(model, view) {
         this.model = model;
-        this.view  = view;
+        this.view = view;
 
         this.model.subscribe(() => this.view.render(this.model.rows));
         this._addEventListeners();
@@ -49,6 +49,14 @@ class DHController {
                     'jointType',
                     jointBtn.dataset.jointBtn
                 );
+            }
+
+            const presetBtn = e.target.closest('[data-load-preset]');
+            if (presetBtn) {
+                const preset = presetBtn.dataset.loadPreset;
+                if (preset === 'puma560') this.model.loadPUMA560();
+                else if (preset === 'robot5dof') this.model.loadRobot5DOF();
+                return;
             }
         });
 
